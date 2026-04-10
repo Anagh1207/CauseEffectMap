@@ -159,23 +159,21 @@ export default function Page() {
       />
 
       <main className="flex flex-1 flex-col">
-        {activeTab === "My Maps" ? (
-          !isSignedIn ? (
-            <DummyLogin onLogin={() => setIsSignedIn(true)} />
-          ) : (
-            <MyMapsView 
-              sessionMaps={sessionMaps}
-              onLoadMap={(sm) => {
-                setMapData(sm.mapData);
-                setMapSource(null);
-                setHistory([]);
-                setHistoryIndex(-1);
-                setTimeout(() => pushHistory(sm.mapData.nodes), 50);
-                setActiveTab("Explore");
-                setShowCanvas(true);
-              }}
-            />
-          )
+        {!isSignedIn ? (
+          <DummyLogin onLogin={() => setIsSignedIn(true)} />
+        ) : activeTab === "My Maps" ? (
+          <MyMapsView 
+            sessionMaps={sessionMaps}
+            onLoadMap={(sm) => {
+              setMapData(sm.mapData);
+              setMapSource(null);
+              setHistory([]);
+              setHistoryIndex(-1);
+              setTimeout(() => pushHistory(sm.mapData.nodes), 50);
+              setActiveTab("Explore");
+              setShowCanvas(true);
+            }}
+          />
         ) : activeTab === "About" ? (
           <div className="mx-auto max-w-2xl px-4 py-20 text-center">
             <h1 className="text-3xl font-bold tracking-tight text-foreground">About CauseMap</h1>

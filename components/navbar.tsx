@@ -52,7 +52,7 @@ export function Navbar({
           </a>
 
           <div className="hidden items-center gap-1 md:flex">
-            {tabs.map((tab) => (
+            {isSignedIn && tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => onTabChange(tab)}
@@ -109,7 +109,7 @@ export function Navbar({
       {mobileMenuOpen && (
         <div className="border-t border-border bg-card px-4 py-3 md:hidden">
           <div className="flex flex-col gap-1">
-            {tabs.map((tab) => (
+            {isSignedIn && tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => {

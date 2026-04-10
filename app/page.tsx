@@ -7,7 +7,6 @@ import { CauseMapCanvas } from "@/components/cause-map-canvas";
 import { InsightPanel } from "@/components/insight-panel";
 import { MapToolbar } from "@/components/map-toolbar";
 import type { MapNode, CauseMapData } from "@/lib/cause-map-types";
-import { generateMapData } from "@/lib/generate-map-data";
 
 export default function Page() {
   const [darkMode, setDarkMode] = useState(false);
@@ -16,6 +15,8 @@ export default function Page() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [animating, setAnimating] = useState(false);
   const [showCanvas, setShowCanvas] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [mapSource, setMapSource] = useState<"gemini" | "fallback" | null>(null);
 
   // Undo / redo history
   const [history, setHistory] = useState<MapNode[][]>([]);
@@ -43,25 +44,45 @@ export default function Page() {
       setIsGenerating(true);
       setAnimating(true);
       setSelectedNode(null);
+      setApiError(null);
+      setMapSource(null);
 
-      // Simulate AI generation delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ problem }),
+        });
 
-      const data = generateMapData(problem);
-      setMapData(data);
-      setShowCanvas(true);
-      pushHistory(data.nodes);
-      setIsGenerating(false);
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({ error: "Unknown error" }));
+          throw new Error(errJson.error ?? `HTTP ${res.status}`);
+        }
 
-      // Scroll to canvas
-      setTimeout(() => {
-        canvasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
+        const data: CauseMapData & { _meta?: { source: "gemini" | "fallback" } } =
+          await res.json();
 
-      // End animating after all nodes appear
-      setTimeout(() => {
+        setMapSource(data._meta?.source ?? "fallback");
+        setMapData(data);
+        setShowCanvas(true);
+        pushHistory(data.nodes);
+
+        // Scroll to canvas
+        setTimeout(() => {
+          canvasRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+
+        // End animating after all nodes appear
+        setTimeout(() => {
+          setAnimating(false);
+        }, data.nodes.length * 120 + 600);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to generate map";
+        setApiError(msg);
         setAnimating(false);
-      }, data.nodes.length * 120 + 600);
+      } finally {
+        setIsGenerating(false);
+      }
     },
     [pushHistory]
   );
@@ -102,6 +123,8 @@ export default function Page() {
     setHistory([]);
     setHistoryIndex(-1);
     setAnimating(false);
+    setApiError(null);
+    setMapSource(null);
   }, []);
 
   return (
@@ -110,6 +133,13 @@ export default function Page() {
 
       <main className="flex flex-1 flex-col">
         <HeroInput onGenerate={handleGenerate} isGenerating={isGenerating} />
+
+        {/* API Error Banner */}
+        {apiError && (
+          <div className="mx-auto mt-4 w-full max-w-2xl rounded-xl border border-destructive/30 bg-destructive/10 px-5 py-3 text-sm text-destructive" role="alert">
+            <strong>Generation failed:</strong> {apiError} — please try again.
+          </div>
+        )}
 
         {showCanvas && mapData && (
           <section
@@ -126,6 +156,11 @@ export default function Page() {
                 <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
                   {mapData.nodes.length} nodes
                 </span>
+                {mapSource === "gemini" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                    ✦ AI-generated
+                  </span>
+                )}
               </div>
               <MapToolbar
                 onUndo={handleUndo}

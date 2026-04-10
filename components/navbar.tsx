@@ -9,11 +9,18 @@ const tabs = ["Explore", "My Maps", "About"] as const;
 export function Navbar({
   darkMode,
   onToggleDarkMode,
+  activeTab,
+  onTabChange,
+  isSignedIn,
+  onSignOut,
 }: {
   darkMode: boolean;
   onToggleDarkMode: () => void;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+  isSignedIn: boolean;
+  onSignOut: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<string>("Explore");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -48,7 +55,7 @@ export function Navbar({
             {tabs.map((tab) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => onTabChange(tab)}
                 className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
                   activeTab === tab
                     ? "bg-primary/10 text-primary"
@@ -62,6 +69,17 @@ export function Navbar({
         </div>
 
         <div className="flex items-center gap-2">
+          {isSignedIn && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSignOut}
+              className="mr-2 hidden text-muted-foreground hover:text-foreground md:inline-flex"
+            >
+              Sign Out
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="icon"
@@ -95,7 +113,7 @@ export function Navbar({
               <button
                 key={tab}
                 onClick={() => {
-                  setActiveTab(tab);
+                  onTabChange(tab);
                   setMobileMenuOpen(false);
                 }}
                 className={`rounded-lg px-3.5 py-2.5 text-left text-sm font-medium transition-colors ${
@@ -107,6 +125,17 @@ export function Navbar({
                 {tab}
               </button>
             ))}
+            {isSignedIn && (
+              <button
+                onClick={() => {
+                  onSignOut();
+                  setMobileMenuOpen(false);
+                }}
+                className="mt-2 rounded-lg px-3.5 py-2.5 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+              >
+                Sign Out
+              </button>
+            )}
           </div>
         </div>
       )}

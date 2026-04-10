@@ -6,10 +6,15 @@ import { HeroInput } from "@/components/hero-input";
 import { CauseMapCanvas } from "@/components/cause-map-canvas";
 import { InsightPanel } from "@/components/insight-panel";
 import { MapToolbar } from "@/components/map-toolbar";
+import { DummyLogin } from "@/components/dummy-login";
+import { MyMapsView, type SessionMap } from "@/components/my-maps-view";
 import type { MapNode, CauseMapData } from "@/lib/cause-map-types";
 
 export default function Page() {
   const [darkMode, setDarkMode] = useState(false);
+  const [activeTab, setActiveTab] = useState("Explore");
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const [sessionMaps, setSessionMaps] = useState<SessionMap[]>([]);
   const [mapData, setMapData] = useState<CauseMapData | null>(null);
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -66,6 +71,17 @@ export default function Page() {
         setMapData(data);
         setShowCanvas(true);
         pushHistory(data.nodes);
+
+        // Store to session history
+        setSessionMaps((prev) => [
+          {
+            id: Date.now(),
+            problem: problem,
+            mapData: data,
+            timestamp: new Date(),
+          },
+          ...prev,
+        ]);
 
         // Scroll to canvas
         setTimeout(() => {
@@ -129,10 +145,45 @@ export default function Page() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Navbar darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} />
+      <Navbar 
+        darkMode={darkMode} 
+        onToggleDarkMode={() => setDarkMode(!darkMode)} 
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          if (tab === "Explore" && mapData) setShowCanvas(true);
+          else setShowCanvas(false);
+        }}
+        isSignedIn={isSignedIn}
+        onSignOut={() => setIsSignedIn(false)}
+      />
 
       <main className="flex flex-1 flex-col">
-        <HeroInput onGenerate={handleGenerate} isGenerating={isGenerating} />
+        {activeTab === "My Maps" ? (
+          !isSignedIn ? (
+            <DummyLogin onLogin={() => setIsSignedIn(true)} />
+          ) : (
+            <MyMapsView 
+              sessionMaps={sessionMaps}
+              onLoadMap={(sm) => {
+                setMapData(sm.mapData);
+                setMapSource(null);
+                setHistory([]);
+                setHistoryIndex(-1);
+                setTimeout(() => pushHistory(sm.mapData.nodes), 50);
+                setActiveTab("Explore");
+                setShowCanvas(true);
+              }}
+            />
+          )
+        ) : activeTab === "About" ? (
+          <div className="mx-auto max-w-2xl px-4 py-20 text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">About CauseMap</h1>
+            <p className="mt-4 text-muted-foreground">CauseMap leverages AI to structure real-world problems into interactive, logical grids. Enter any problem and explore its causes and effects.</p>
+          </div>
+        ) : (
+          <>
+            <HeroInput onGenerate={handleGenerate} isGenerating={isGenerating} />
 
         {/* API Error Banner */}
         {apiError && (
@@ -247,6 +298,8 @@ export default function Page() {
               ))}
             </div>
           </section>
+        )}
+          </>
         )}
       </main>
     </div>
